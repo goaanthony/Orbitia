@@ -1,98 +1,236 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useState } from 'react';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Image } from 'react-native';
+
+import { useRouter } from 'expo-router';
+
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+
+const { width } = Dimensions.get('window');
+
+const PLANETS = [
+  {
+    id: 'earth',
+    name: 'EARTH',
+    subtitle: 'THE LIVING PLANET',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/The_Blue_Marble_%28remastered%29.jpg/240px-The_Blue_Marble_%28remastered%29.jpg',
+    temp: '19°C',
+    feelsLike: '22°C',
+    location: 'BORDEAUX, FR',
+  },
+  {
+    id: 'mars',
+    name: 'MARS',
+    subtitle: 'THE RED PLANET',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/240px-OSIRIS_Mars_true_color.jpg',
+    temp: '-46°C',
+    feelsLike: '-50°C',
+    location: 'MARS',
+  },
+  {
+    id: 'moon',
+    name: 'MOON',
+    subtitle: 'EARTH\'S COMPANION',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/240px-FullMoon2010.jpg',
+    temp: '-173°C',
+    feelsLike: '-180°C',
+    location: 'MOON',
+  },
+];
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const router = useRouter();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const prev = () => setCurrentIndex((i) => (i - 1 + PLANETS.length) % PLANETS.length);
+  const next = () => setCurrentIndex((i) => (i + 1) % PLANETS.length);
+
+  const planet = PLANETS[currentIndex];
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.appName}>SPACED</Text>
+        </View>
+        <Image
+          source={{ uri: 'https://i.pinimg.com/736x/e3/aa/47/e3aa47f7914d1b77f0b00d99f2efea1f.jpg' }}
+          style={styles.avatar}
+        />
+      </View>
+
+      <View style={styles.titleSection}>
+        <Text style={styles.greeting}>Hi Foutre idée,</Text>
+        <Text style={styles.title}>Which planet{'\n'}would you like to explore?</Text>
+      </View>
+
+      <View style={styles.carouselContainer}>
+        <TouchableOpacity style={styles.arrowBtn} onPress={prev}>
+          <ChevronLeft color="#fff" size={20} />
+        </TouchableOpacity>
+
+        <View style={styles.planetWrapper}>
+          <View style={[styles.ring, styles.ring1]} />
+          <View style={[styles.ring, styles.ring2]} />
+          <View style={[styles.ring, styles.ring3]} />
+          <View style={styles.orbitDot} />
+
+          <Image
+            source={{ uri: planet.image }}
+            style={styles.planetImage}
+          />
+          <Text style={styles.planetName}>{planet.name}</Text>
+          <Text style={styles.planetSubtitle}>{planet.subtitle}</Text>
+
+          <View style={styles.dotsRow}>
+            {PLANETS.map((_, i) => (
+              <View key={i} style={[styles.dot, i === currentIndex && styles.dotActive]} />
+            ))}
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.arrowBtn} onPress={next}>
+          <ChevronRight color="#fff" size={20} />
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => router.push({ pathname: '/modal', params: { planetId: planet.id } })}
+      >
+        <Text style={styles.buttonText}>Explore planet</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  appName: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 3,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  titleSection: {
+    marginBottom: 16,
+  },
+  greeting: {
+    color: '#9CA3AF',
+    fontSize: 14,
+  },
+  title: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+    marginTop: 4,
+    lineHeight: 30,
+  },
+  carouselContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  arrowBtn: {
+    padding: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  planetWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    position: 'relative',
+  },
+  ring: {
     position: 'absolute',
+    borderRadius: 1000,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderStyle: 'dashed',
+  },
+  ring1: {
+    width: 200,
+    height: 200,
+  },
+  ring2: {
+    width: 240,
+    height: 240,
+  },
+  ring3: {
+    width: 280,
+    height: 280,
+  },
+  orbitDot: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+    top: '50%',
+    left: '50%',
+    marginLeft: 100,
+    marginTop: -44,
+  },
+  planetImage: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+  },
+  planetName: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: 3,
+    marginTop: 20,
+  },
+  planetSubtitle: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    letterSpacing: 1,
+    marginTop: 4,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    marginTop: 16,
+    gap: 6,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  dotActive: {
+    backgroundColor: '#fff',
+    width: 16,
+  },
+  button: {
+    backgroundColor: '#E6F358',
+    paddingVertical: 18,
+    borderRadius: 30,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  buttonText: {
+    color: '#000',
+    fontWeight: '700',
+    fontSize: 16,
   },
 });

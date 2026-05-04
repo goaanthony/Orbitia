@@ -1,112 +1,185 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, Image, ActivityIndicator,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { fetchNasaImage, type ApodData } from '@/services/api';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+const SOLAR_SYSTEM = [
+  { id: 'mercury', name: 'Mercury', size: 18, color: '#A89080', orbitRadius: 50 },
+  { id: 'venus',   name: 'Venus',   size: 24, color: '#E8C87A', orbitRadius: 80 },
+  { id: 'earth',   name: 'Earth',   size: 26, color: '#4A90D9', orbitRadius: 115 },
+  { id: 'mars',    name: 'Mars',    size: 20, color: '#C1440E', orbitRadius: 148 },
+  { id: 'jupiter', name: 'Jupiter', size: 44, color: '#C88B5A', orbitRadius: 195 },
+  { id: 'saturn',  name: 'Saturn',  size: 36, color: '#E4D18A', orbitRadius: 242 },
+];
 
-export default function TabTwoScreen() {
+export default function ExploreScreen() {
+  const router = useRouter();
+  const [apod, setApod] = useState<ApodData | null>(null);
+  const [apodLoading, setApodLoading] = useState(true);
+
+  useEffect(() => {
+    fetchNasaImage().then((data) => {
+      setApod(data);
+      setApodLoading(false);
+    });
+  }, []);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
+    <View style={styles.container}>
+      <Text style={styles.title}>Galaxy</Text>
+
+      <View style={styles.solarSystem}>
+        <View style={styles.sun} />
+        {SOLAR_SYSTEM.map((planet) => (
+          <View
+            key={planet.id + '_orbit'}
+            style={[
+              styles.orbit,
+              {
+                width: planet.orbitRadius * 2,
+                height: planet.orbitRadius * 2,
+                borderRadius: planet.orbitRadius,
+              },
+            ]}
+          />
+        ))}
+        {SOLAR_SYSTEM.map((planet, i) => {
+          const angle = (i * 55 * Math.PI) / 180;
+          const x = Math.cos(angle) * planet.orbitRadius;
+          const y = Math.sin(angle) * planet.orbitRadius;
+          return (
+            <TouchableOpacity
+              key={planet.id}
+              style={[
+                styles.planet,
+                {
+                  width: planet.size,
+                  height: planet.size,
+                  borderRadius: planet.size / 2,
+                  backgroundColor: planet.color,
+                  transform: [
+                    { translateX: x - planet.size / 2 },
+                    { translateY: y - planet.size / 2 },
+                  ],
+                },
+              ]}
+              onPress={() =>
+                router.push({ pathname: '/modal', params: { planetId: planet.id } })
+              }
+            />
+          );
         })}
-      </Collapsible>
-    </ParallaxScrollView>
+      </View>
+
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.apodSection}>
+          <Text style={styles.sectionLabel}>NASA · Picture of the Day</Text>
+          {apodLoading ? (
+            <ActivityIndicator color="#fff" style={{ marginTop: 20 }} />
+          ) : apod ? (
+            <View style={styles.apodCard}>
+              {apod.media_type === 'image' ? (
+                <Image source={{ uri: apod.url }} style={styles.apodImage} resizeMode="cover" />
+              ) : (
+                <View style={styles.apodVideoPlaceholder}>
+                  <Text style={styles.apodVideoText}>🎬 Video — tap to open</Text>
+                </View>
+              )}
+              <View style={styles.apodInfo}>
+                <Text style={styles.apodTitle}>{apod.title}</Text>
+                <Text style={styles.apodDate}>{apod.date}</Text>
+                <Text style={styles.apodDesc} numberOfLines={3}>
+                  {apod.explanation}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.apodError}>Could not load NASA APOD.</Text>
+          )}
+        </View>
+
+        <Text style={{ ...styles.sectionLabel, marginTop: 24 }}>
+          Solar System
+        </Text>
+        {SOLAR_SYSTEM.map((planet) => (
+          <TouchableOpacity
+            key={planet.id}
+            style={styles.listRow}
+            onPress={() =>
+              router.push({ pathname: '/modal', params: { planetId: planet.id } })
+            }
+          >
+            <View
+              style={[
+                styles.dot,
+                {
+                  backgroundColor: planet.color,
+                  width: planet.size * 0.6 + 8,
+                  height: planet.size * 0.6 + 8,
+                  borderRadius: 20,
+                },
+              ]}
+            />
+            <Text style={styles.listName}>{planet.name}</Text>
+          </TouchableOpacity>
+        ))}
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
+  container: { flex: 1, backgroundColor: '#000', paddingTop: 60 },
+  title: {
+    color: '#fff', fontSize: 18, fontWeight: '700',
+    textAlign: 'center', letterSpacing: 1, marginBottom: 16,
+  },
+  solarSystem: {
+    width: '100%', height: 260,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sun: {
     position: 'absolute',
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: '#FFC94D',
+    shadowColor: '#FFC94D', shadowRadius: 18, shadowOpacity: 0.9, elevation: 10,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  orbit: {
+    position: 'absolute',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderStyle: 'dashed',
   },
+  planet: { position: 'absolute' },
+  scroll: { flex: 1, paddingHorizontal: 20 },
+  sectionLabel: {
+    color: '#9CA3AF', fontSize: 11, letterSpacing: 1.5,
+    textTransform: 'uppercase', marginBottom: 12,
+  },
+  apodSection: { marginTop: 8 },
+  apodCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+  },
+  apodImage: { width: '100%', height: 180 },
+  apodVideoPlaceholder: {
+    height: 120, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  apodVideoText: { color: '#9CA3AF', fontSize: 14 },
+  apodInfo: { padding: 14 },
+  apodTitle: { color: '#fff', fontSize: 14, fontWeight: '700', marginBottom: 4 },
+  apodDate: { color: '#E6F358', fontSize: 11, marginBottom: 8 },
+  apodDesc: { color: '#9CA3AF', fontSize: 12, lineHeight: 18 },
+  apodError: { color: '#9CA3AF', fontSize: 13, marginTop: 12 },
+  listRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 12, gap: 14,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  dot: {},
+  listName: { color: '#fff', fontSize: 15 },
 });
