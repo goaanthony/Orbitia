@@ -6,44 +6,28 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react-native';
 import {
-  fetchWeatherForecast, fetchCurrentWeather,
+  fetchWeatherForecast, fetchCurrentWeather, fetchMarsWeather,
   weatherIconToEmoji, formatForecastDate, pickDailyForecasts,
-  type ForecastEntry,
+  type ForecastEntry, type InSightData,
 } from '@/services/api';
 
-const PLANET_STATIC: Record<string, {
-  name: string; location: string; temp: string; feelsLike: string;
-  image: string;
-  forecast: { day: string; date: string; temp: string; icon: string }[];
-}> = {
-  mars: {
-    name: 'MARS', location: 'MARS',
-    temp: '-46°C', feelsLike: '-50°C',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/240px-OSIRIS_Mars_true_color.jpg',
-    forecast: [
-      { day: 'Sol 1', date: '14 Apr', temp: '-40°C', icon: '💨' },
-      { day: 'Sol 2', date: '15 Apr', temp: '-55°C', icon: '💨' },
-      { day: 'Sol 3', date: '16 Apr', temp: '-48°C', icon: '💨' },
-      { day: 'Sol 4', date: '17 Apr', temp: '-60°C', icon: '❄️' },
-      { day: 'Sol 5', date: '18 Apr', temp: '-43°C', icon: '💨' },
-    ],
-  },
-  moon: {
-    name: 'MOON', location: 'MOON',
-    temp: '-173°C', feelsLike: '-180°C',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/240px-FullMoon2010.jpg',
-    forecast: [
-      { day: 'Day 1', date: '14 Apr', temp: '-170°C', icon: '🌑' },
-      { day: 'Day 2', date: '15 Apr', temp: '-175°C', icon: '🌑' },
-      { day: 'Day 3', date: '16 Apr', temp: '-180°C', icon: '🌑' },
-      { day: 'Day 4', date: '17 Apr', temp: '-165°C', icon: '🌑' },
-      { day: 'Day 5', date: '18 Apr', temp: '-172°C', icon: '🌑' },
-    ],
-  },
+const MOON_STATIC = {
+  name: 'MOON', location: 'MOON',
+  temp: '-173°C', feelsLike: '-180°C',
+  image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/240px-FullMoon2010.jpg',
+  forecast: [
+    { day: 'Day 1', date: '', temp: '-170°C', icon: '🌑' },
+    { day: 'Day 2', date: '', temp: '-175°C', icon: '🌑' },
+    { day: 'Day 3', date: '', temp: '-180°C', icon: '🌑' },
+    { day: 'Day 4', date: '', temp: '-165°C', icon: '🌑' },
+    { day: 'Day 5', date: '', temp: '-172°C', icon: '🌑' },
+  ],
 };
 
 const EARTH_IMAGE =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/The_Blue_Marble_%28remastered%29.jpg/240px-The_Blue_Marble_%28remastered%29.jpg';
+const MARS_IMAGE =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/240px-OSIRIS_Mars_true_color.jpg';
 
 type DailyRow = { day: string; date: string; temp: string; icon: string };
 
@@ -59,142 +43,347 @@ export default function PlanetDetail() {
   const [feelsLike, setFeelsLike] = useState('—');
   const [forecast, setForecast] = useState<DailyRow[]>([]);
   const [dateStr, setDateStr] = useState('');
+  const [marsNote, setMarsNote] = useState('');   // InSight disclaimer
+  const [marsExtra, setMarsExtra] = useState(''); // pressure / wind info
 
   const isEarth = !planetId || planetId === 'earth';
-  const staticData = !isEarth ? (PLANET_STATIC[planetId] ?? PLANET_STATIC.mars) : null;
-  const planetImage = isEarth ? EARTH_IMAGE : staticData!.image;
+  const isMars = planetId === 'mars';
+  const isMoon = planetId === 'moon';
+
+  const planetImage = isEarth ? EARTH_IMAGE : isMars ? MARS_IMAGE : MOON_STATIC.image;
+  const planetName = isEarth ? 'EARTH' : isMars ? 'MARS' : 'MOON';
 
   useEffect(() => {
     const now = new Date();
     setDateStr(
-      now.toLocaleDateString('en-US', {
-        day: 'numeric', month: 'long',
-      }) + ', ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      now.toLocaleDateString('en-US', { day: 'numeric', month: 'long' }) +
+        ', ' +
+        now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     );
 
-    if (!isEarth) {
-      setLocation(staticData!.location);
-      setTemp(staticData!.temp);
-      setFeelsLike(staticData!.feelsLike);
-      setForecast(staticData!.forecast);
+    if (isMoon) {
+      setLocation(MOON_STATIC.location);
+      setTemp(MOON_STATIC.temp);
+      setFeelsLike(MOON_STATIC.feelsLike);
+      setForecast(MOON_STATIC.forecast);
       return;
     }
 
+    if (isMars) {
+      loadMarsWeather();
+      return;
+    }
+
+    setLoading(true);
+    loadEarthWeather();
+  }, [planetId]);
+
+  async function loadMarsWeather() {
+    setLoading(true);
+    setLocation('JEZERO CRATER, MARS');
+
+    try {
+      const data: InSightData | null = await fetchMarsWeather();
+
+      if (data && data.latestSol) {
+        const sol = data.latestSol;
+        const avgTemp = sol.AT?.av != null ? `${Math.round(sol.AT.av)}°C` : '-46°C';
+        const minTemp = sol.AT?.mn != null ? `${Math.round(sol.AT.mn)}°C` : null;
+
+        setTemp(avgTemp);
+        setFeelsLike(minTemp ?? '-50°C');
+        setMarsNote(`Last recorded by NASA InSight lander · Sol ${sol.sol}`);
+
+        const parts: string[] = [];
+        if (sol.PRE?.av) parts.push(`Pressure: ${Math.round(sol.PRE.av)} Pa`);
+        if (sol.HWS?.av) parts.push(`Wind: ${sol.HWS.av.toFixed(1)} m/s`);
+        if (sol.WD?.most_common?.compass_point) parts.push(`Dir: ${sol.WD.most_common.compass_point}`);
+        setMarsExtra(parts.join('   ·   '));
+
+        const rows: DailyRow[] = data.sols.slice(-5).map((s, i) => ({
+          day: `Sol ${s.sol}`,
+          date: '',
+          temp: s.AT?.av != null ? `${Math.round(s.AT.av)}°C` : '—',
+          icon: (s.HWS?.av ?? 0) > 10 ? '💨' : '🌫',
+        }));
+        setForecast(rows);
+      } else {
+        setTemp('-46°C');
+        setFeelsLike('-50°C');
+        setMarsNote('InSight data unavailable · Showing typical values');
+        setForecast([
+          { day: 'Sol 1', date: '', temp: '-40°C', icon: '🌫' },
+          { day: 'Sol 2', date: '', temp: '-55°C', icon: '💨' },
+          { day: 'Sol 3', date: '', temp: '-48°C', icon: '🌫' },
+          { day: 'Sol 4', date: '', temp: '-60°C', icon: '❄️' },
+          { day: 'Sol 5', date: '', temp: '-43°C', icon: '💨' },
+        ]);
+      }
+    } catch (e) {
+      setTemp('-46°C');
+      setFeelsLike('-50°C');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadEarthWeather() {
     const targetCity = city || 'Bordeaux';
     const targetCountry = country || 'FR';
-    setLocation(`${targetCity.toUpperCase()}, ${targetCountry.toUpperCase()}`);
-    setLoading(true);
 
-    Promise.all([
-      fetchCurrentWeather(targetCity, targetCountry),
-      fetchWeatherForecast(targetCity, targetCountry),
-    ])
-      .then(([current, forecastData]) => {
-        if (current?.main) {
-          setTemp(`${Math.round(current.main.temp)}°C`);
-          setFeelsLike(`${Math.round(current.main.feels_like)}°C`);
-          if (current.name && current.sys?.country) {
-            setLocation(`${current.name.toUpperCase()}, ${current.sys.country}`);
-          }
-        }
-        if (forecastData?.list) {
-          const daily = pickDailyForecasts(forecastData.list, 5);
-          setForecast(
-            daily.map((e: ForecastEntry) => {
-              const { day, date } = formatForecastDate(e.dt_txt);
-              return {
-                day,
-                date,
-                temp: `${Math.round(e.main.temp)}°C`,
-                icon: weatherIconToEmoji(e.weather[0]?.icon ?? ''),
-              };
-            })
-          );
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [planetId, city, country]);
+    try {
+      const [current, forecastData] = await Promise.all([
+        fetchCurrentWeather(targetCity, targetCountry),
+        fetchWeatherForecast(targetCity, targetCountry),
+      ]);
+
+      if (current) {
+        setLocation(`${current.name?.toUpperCase()}, ${current.sys?.country ?? targetCountry}`);
+        setTemp(`${Math.round(current.main?.temp ?? 0)}°C`);
+        setFeelsLike(`${Math.round(current.main?.feels_like ?? 0)}°C`);
+      }
+
+      if (forecastData?.list?.length) {
+        const daily = pickDailyForecasts(forecastData.list);
+        setForecast(
+          daily.map((entry) => ({
+            day: formatForecastDate(entry.dt_txt).split(' ')[0],
+            date: formatForecastDate(entry.dt_txt).split(' ')[1] ?? '',
+            temp: `${Math.round(entry.main.temp)}°C`,
+            icon: weatherIconToEmoji(entry.weather[0]?.icon ?? ''),
+          }))
+        );
+      }
+    } catch (e) {
+      console.error('[loadEarthWeather]', e);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <View style={styles.container}>
-      <Image source={{ uri: planetImage }} style={styles.bgPlanet} />
-      <View style={styles.overlay} />
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: planetImage }} style={styles.planetImage} resizeMode="cover" />
+        <View style={styles.imageOverlay} />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-            <X color="#fff" size={18} />
-          </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.locationText}>{location}</Text>
-            <Text style={styles.date}>Today, {dateStr}</Text>
-          </View>
+        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+          <X color="#fff" size={18} />
+        </TouchableOpacity>
+
+        <View style={styles.planetNameOverlay}>
+          <Text style={styles.planetNameText}>{planetName}</Text>
+        </View>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.locationRow}>
+          <Text style={styles.locationText}>{location}</Text>
+          <Text style={styles.dateText}>{dateStr}</Text>
         </View>
 
+        {isMars && marsNote ? (
+          <View style={styles.insightBadge}>
+            <Text style={styles.insightText}>🛸 {marsNote}</Text>
+          </View>
+        ) : null}
+
         {loading ? (
-          <ActivityIndicator color="#fff" size="large" style={{ marginTop: 60, marginBottom: 20 }} />
+          <ActivityIndicator color="#E6F358" style={{ marginVertical: 32 }} />
         ) : (
-          <>
-            <Text style={styles.temp}>{temp}</Text>
-            <Text style={styles.feelsLike}>Feels like: {feelsLike}</Text>
-          </>
+          <View style={styles.tempBlock}>
+            <Text style={styles.tempMain}>{temp}</Text>
+            <Text style={styles.tempSub}>Feels like {feelsLike}</Text>
+            {isMars && marsExtra ? (
+              <Text style={styles.marsExtra}>{marsExtra}</Text>
+            ) : null}
+          </View>
         )}
 
         {forecast.length > 0 && (
-          <View style={styles.forecastCard}>
-            <Text style={styles.forecastTitle}>5 Days Forecast:</Text>
-            {forecast.map((item, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.forecastRow,
-                  i < forecast.length - 1 && styles.forecastRowBorder,
-                ]}
-              >
-                <Text style={styles.forecastIcon}>{item.icon}</Text>
-                <Text style={styles.forecastTemp}>{item.temp}</Text>
-                <Text style={styles.forecastDate}>
-                  {item.day}, {item.date}
-                </Text>
-              </View>
-            ))}
-          </View>
+          <>
+            <Text style={styles.sectionLabel}>
+              {isMars ? 'SOL FORECAST' : '5-DAY FORECAST'}
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.forecastRow}>
+              {forecast.map((item, i) => (
+                <View key={i} style={styles.forecastCard}>
+                  <Text style={styles.forecastDay}>{item.day}</Text>
+                  {item.date ? <Text style={styles.forecastDate}>{item.date}</Text> : null}
+                  <Text style={styles.forecastIcon}>{item.icon}</Text>
+                  <Text style={styles.forecastTemp}>{item.temp}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </>
         )}
+
+        <View style={styles.factCard}>
+          <Text style={styles.factLabel}>DID YOU KNOW</Text>
+          <Text style={styles.factText}>
+            {isEarth
+              ? 'Earth is the only known planet to harbour life, with over 8.7 million species catalogued so far.'
+              : isMars
+              ? 'A Martian day (sol) is 24 hours, 37 minutes — the most Earth-like of any planet in the solar system.'
+              : "The Moon is slowly drifting away from Earth at about 3.8 cm per year — roughly the rate fingernails grow."}
+          </Text>
+        </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A1628' },
-  bgPlanet: {
-    position: 'absolute', top: 30, right: -30,
-    width: 200, height: 200, borderRadius: 100, opacity: 0.9,
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
   },
-  overlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(10,22,40,0.55)',
+  imageContainer: {
+    height: 260,
+    position: 'relative',
   },
-  content: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginBottom: 16 },
+  planetImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
   closeBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center', marginTop: 2,
+    position: 'absolute',
+    top: 52,
+    right: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  locationText: { color: '#fff', fontSize: 15, fontWeight: '700', letterSpacing: 1 },
-  date: { color: '#9CA3AF', fontSize: 11, marginTop: 2 },
-  temp: { color: '#fff', fontSize: 90, fontWeight: '800', lineHeight: 100, marginTop: 20 },
-  feelsLike: { color: 'rgba(255,255,255,0.75)', fontSize: 18, marginBottom: 36 },
+  planetNameOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    left: 24,
+  },
+  planetNameText: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: 4,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  locationText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  dateText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+  },
+  insightBadge: {
+    backgroundColor: 'rgba(230,243,88,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(230,243,88,0.25)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 12,
+  },
+  insightText: {
+    color: '#E6F358',
+    fontSize: 11,
+    letterSpacing: 0.3,
+  },
+  tempBlock: {
+    marginVertical: 16,
+  },
+  tempMain: {
+    color: '#fff',
+    fontSize: 56,
+    fontWeight: '200',
+    letterSpacing: -1,
+  },
+  tempSub: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  marsExtra: {
+    color: '#6B7280',
+    fontSize: 11,
+    marginTop: 6,
+    letterSpacing: 0.3,
+  },
+  sectionLabel: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  forecastRow: {
+    marginBottom: 24,
+  },
   forecastCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 20, padding: 20,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 14,
+    marginRight: 10,
+    alignItems: 'center',
+    minWidth: 72,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  forecastTitle: { color: '#9CA3AF', fontSize: 13, marginBottom: 16, letterSpacing: 0.5 },
-  forecastRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
-  forecastRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
-  forecastIcon: { fontSize: 22, width: 36 },
-  forecastTemp: { color: '#fff', fontSize: 16, fontWeight: '600', width: 70 },
-  forecastDate: { color: '#9CA3AF', fontSize: 13, flex: 1, textAlign: 'right' },
+  forecastDay: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  forecastDate: {
+    color: '#6B7280',
+    fontSize: 10,
+    marginBottom: 6,
+  },
+  forecastIcon: {
+    fontSize: 20,
+    marginBottom: 6,
+  },
+  forecastTemp: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  factCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+  },
+  factLabel: {
+    color: '#E6F358',
+    fontSize: 10,
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  factText: {
+    color: '#D1D5DB',
+    fontSize: 14,
+    lineHeight: 22,
+  },
 });

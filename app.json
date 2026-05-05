@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Orbitia",
-    "slug": "Orbitia",
+    "slug": "idk",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -43,6 +43,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "68fc309a-b0ff-4042-b083-2862349845ac"
+      }
+    },
+    "owner": "gameknight",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/68fc309a-b0ff-4042-b083-2862349845ac"
     }
   }
 }

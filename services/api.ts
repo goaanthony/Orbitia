@@ -1,5 +1,6 @@
 export const OPENWEATHER_KEY = 'ed6f7a7f435cab95a91d943fe15f5b09';
-export const NASA_KEY = 'DEMO_KEY';
+export const NASA_KEY = '4347bf01341bc471a64048cf9c37289f';
+
 export type ForecastEntry = {
   dt: number;
   dt_txt: string;
@@ -17,14 +18,24 @@ export type WeatherForecast = {
   list: ForecastEntry[];
 };
 
-export type ApodData = {
+export type InSightSol = {
+  sol: string;
+  AT?: { av: number; mn: number; mx: number }; // Atmospheric Temperature (°C)
+  PRE?: { av: number; mn: number; mx: number }; // Pressure (Pa)
+  HWS?: { av: number; mn: number; mx: number }; // Horizontal Wind Speed (m/s)
+  WD?: { most_common?: { compass_point: string } };  // Wind direction
+};
+
+export type InSightData = {
+  sols: InSightSol[];
+  latestSol: InSightSol | null;
+};
+
+export type NasaImage = {
   title: string;
-  date: string;
-  explanation: string;
+  description: string;
   url: string;
-  hdurl?: string;
-  media_type: 'image' | 'video';
-  copyright?: string;
+  date: string;
 };
 
 export async function fetchWeatherForecast(
@@ -56,25 +67,61 @@ export async function fetchCurrentWeather(city: string, countryCode = '') {
   }
 }
 
-const NASA_IMAGE_QUERIES = ['nebula', 'galaxy', 'planet', 'mars rover', 'hubble'];
-
-export async function fetchNasaImage(): Promise<ApodData | null> {
-  const query = NASA_IMAGE_QUERIES[Math.floor(Math.random() * NASA_IMAGE_QUERIES.length)];
+export async function fetchMarsWeather(): Promise<InSightData | null> {
   try {
-    const url = `https://images-api.nasa.gov/search?q=${query}&media_type=image&year_start=2020&page_size=20`;
+    const url = `https://api.nasa.gov/insight_weather/?api_key=${NASA_KEY}&feedtype=json&ver=1.0`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`NASA Image Library error: ${res.status}`);
+    if (!res.ok) throw new Error(`InSight API error: ${res.status}`);
     const json = await res.json();
-    const items: any[] = json?.collection?.items ?? [];
-    // Pick a random item from results for variety
-    const item = items[Math.floor(Math.random() * items.length)];
-    if (!item) throw new Error('No items returned');
+
+    const solKeys: string[] = json.sol_keys ?? [];
+    if (!solKeys.length) return null;
+
+    const sols: InSightSol[] = solKeys.map((sol) => ({
+      sol,
+      AT: json[sol]?.AT,
+      PRE: json[sol]?.PRE,
+      HWS: json[sol]?.HWS,
+      WD: json[sol]?.WD,
+    }));
+
     return {
-      title: item.data?.[0]?.title ?? 'NASA Image',
-      date: item.data?.[0]?.date_created?.slice(0, 10) ?? '',
-      explanation: item.data?.[0]?.description ?? '',
-      url: item.links?.[0]?.href ?? '',
-      media_type: 'image',
+      sols,
+      latestSol: sols[sols.length - 1] ?? null,
+    };
+  } catch (e) {
+    console.error('[fetchMarsWeather]', e);
+    return null;
+  }
+}
+
+const NASA_IMAGE_QUERIES = [
+  'nebula', 'galaxy spiral', 'planet mars surface',
+  'hubble deep field', 'saturn rings', 'solar flare',
+];
+
+export async function fetchNasaImage(): Promise<NasaImage | null> {
+  try {
+    const query = NASA_IMAGE_QUERIES[Math.floor(Math.random() * NASA_IMAGE_QUERIES.length)];
+    const url = `https://images-api.nasa.gov/search?q=${encodeURIComponent(query)}&media_type=image&page_size=10`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`NASA Images error: ${res.status}`);
+    const json = await res.json();
+    const items = json?.collection?.items ?? [];
+    if (!items.length) return null;
+
+    const item = items[Math.floor(Math.random() * items.length)];
+    const data = item?.data?.[0];
+    const links = item?.links ?? [];
+    const imageUrl = links.find((l: any) => l.rel === 'preview')?.href ?? links[0]?.href;
+
+    if (!imageUrl || !data) return null;
+
+    return {
+      title: data.title ?? 'NASA Space Image',
+      description: data.description ?? '',
+      url: imageUrl,
+      date: data.date_created?.slice(0, 10) ?? '',
     };
   } catch (e) {
     console.error('[fetchNasaImage]', e);
@@ -82,44 +129,27 @@ export async function fetchNasaImage(): Promise<ApodData | null> {
   }
 }
 
-export function weatherIconToEmoji(icon: string): string {
+export function weatherIconToEmoji(iconCode: string): string {
+  if (!iconCode) return '🌡';
+  const code = iconCode.replace('d', '').replace('n', '');
   const map: Record<string, string> = {
-    '01d': '☀️', '01n': '🌙',
-    '02d': '⛅', '02n': '☁️',
-    '03d': '☁️', '03n': '☁️',
-    '04d': '☁️', '04n': '☁️',
-    '09d': '🌧️', '09n': '🌧️',
-    '10d': '🌦️', '10n': '🌧️',
-    '11d': '⛈️', '11n': '⛈️',
-    '13d': '❄️', '13n': '❄️',
-    '50d': '💨', '50n': '💨',
+    '01': '☀️', '02': '🌤', '03': '☁️', '04': '☁️',
+    '09': '🌧', '10': '🌦', '11': '⛈', '13': '❄️', '50': '🌫',
   };
-  return map[icon] ?? '🌡';
+  return map[code] ?? '🌡';
 }
 
-export function formatForecastDate(dt_txt: string): { day: string; date: string } {
-  const d = new Date(dt_txt);
-  const day = d.toLocaleDateString('en-US', { weekday: 'long' });
-  const date = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-  return { day, date };
+export function formatForecastDate(dtTxt: string): string {
+  const d = new Date(dtTxt);
+  return d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
 }
 
-export function pickDailyForecasts(list: ForecastEntry[], days = 5): ForecastEntry[] {
+export function pickDailyForecasts(list: ForecastEntry[]): ForecastEntry[] {
   const seen = new Set<string>();
-  const result: ForecastEntry[] = [];
-  for (const entry of list) {
+  return list.filter((entry) => {
     const day = entry.dt_txt.slice(0, 10);
-    const isNoon = entry.dt_txt.includes('12:00:00');
-    if (!seen.has(day) || isNoon) {
-      if (seen.has(day)) {
-        const idx = result.findIndex(e => e.dt_txt.startsWith(day));
-        if (idx !== -1) result[idx] = entry;
-      } else {
-        seen.add(day);
-        result.push(entry);
-      }
-    }
-    if (result.length >= days && seen.size >= days) break;
-  }
-  return result.slice(0, days);
+    if (seen.has(day)) return false;
+    seen.add(day);
+    return true;
+  }).slice(0, 5);
 }

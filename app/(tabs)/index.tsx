@@ -1,10 +1,8 @@
-import { useState } from 'react';
-
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Image } from 'react-native';
-
-import { useRouter } from 'expo-router';
-
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useUser } from '@/context/UserContext';
 
 const { width } = Dimensions.get('window');
 
@@ -14,33 +12,25 @@ const PLANETS = [
     name: 'EARTH',
     subtitle: 'THE LIVING PLANET',
     image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/The_Blue_Marble_%28remastered%29.jpg/240px-The_Blue_Marble_%28remastered%29.jpg',
-    temp: '19°C',
-    feelsLike: '22°C',
-    location: 'BORDEAUX, FR',
   },
   {
     id: 'mars',
     name: 'MARS',
     subtitle: 'THE RED PLANET',
     image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/240px-OSIRIS_Mars_true_color.jpg',
-    temp: '-46°C',
-    feelsLike: '-50°C',
-    location: 'MARS',
   },
   {
     id: 'moon',
     name: 'MOON',
-    subtitle: 'EARTH\'S COMPANION',
+    subtitle: "EARTH'S COMPANION",
     image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/240px-FullMoon2010.jpg',
-    temp: '-173°C',
-    feelsLike: '-180°C',
-    location: 'MOON',
   },
 ];
 
 export default function HomeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const router = useRouter();
+  const { profile } = useUser();
 
   const prev = () => setCurrentIndex((i) => (i - 1 + PLANETS.length) % PLANETS.length);
   const next = () => setCurrentIndex((i) => (i + 1) % PLANETS.length);
@@ -50,17 +40,12 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.appName}>SPACED</Text>
-        </View>
-        <Image
-          source={{ uri: 'https://i.pinimg.com/736x/e3/aa/47/e3aa47f7914d1b77f0b00d99f2efea1f.jpg' }}
-          style={styles.avatar}
-        />
+        <Text style={styles.appName}>SPACED</Text>
+        <Image source={{ uri: profile.avatar }} style={styles.avatar} />
       </View>
 
       <View style={styles.titleSection}>
-        <Text style={styles.greeting}>Hi Foutre idée,</Text>
+        <Text style={styles.greeting}>Hi {profile.name},</Text>
         <Text style={styles.title}>Which planet{'\n'}would you like to explore?</Text>
       </View>
 
@@ -75,10 +60,7 @@ export default function HomeScreen() {
           <View style={[styles.ring, styles.ring3]} />
           <View style={styles.orbitDot} />
 
-          <Image
-            source={{ uri: planet.image }}
-            style={styles.planetImage}
-          />
+          <Image source={{ uri: planet.image }} style={styles.planetImage} />
           <Text style={styles.planetName}>{planet.name}</Text>
           <Text style={styles.planetSubtitle}>{planet.subtitle}</Text>
 
@@ -165,18 +147,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
     borderStyle: 'dashed',
   },
-  ring1: {
-    width: 200,
-    height: 200,
-  },
-  ring2: {
-    width: 240,
-    height: 240,
-  },
-  ring3: {
-    width: 280,
-    height: 280,
-  },
+  ring1: { width: 200, height: 200 },
+  ring2: { width: 240, height: 240 },
+  ring3: { width: 280, height: 280 },
   orbitDot: {
     position: 'absolute',
     width: 8,

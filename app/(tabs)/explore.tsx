@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { fetchNasaImage, type ApodData } from '@/services/api';
+import { fetchNasaImage, type NasaImage } from '@/services/api';
 
 const SOLAR_SYSTEM = [
   { id: 'mercury', name: 'Mercury', size: 18, color: '#A89080', orbitRadius: 50 },
@@ -17,7 +17,7 @@ const SOLAR_SYSTEM = [
 
 export default function ExploreScreen() {
   const router = useRouter();
-  const [apod, setApod] = useState<ApodData | null>(null);
+  const [apod, setApod] = useState<NasaImage | null>(null);
   const [apodLoading, setApodLoading] = useState(true);
 
   useEffect(() => {
@@ -31,6 +31,7 @@ export default function ExploreScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Galaxy</Text>
 
+      {/* Solar system diagram */}
       <View style={styles.solarSystem}>
         <View style={styles.sun} />
         {SOLAR_SYSTEM.map((planet) => (
@@ -75,24 +76,19 @@ export default function ExploreScreen() {
       </View>
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* NASA APOD Card */}
         <View style={styles.apodSection}>
           <Text style={styles.sectionLabel}>NASA · Picture of the Day</Text>
           {apodLoading ? (
             <ActivityIndicator color="#fff" style={{ marginTop: 20 }} />
           ) : apod ? (
             <View style={styles.apodCard}>
-              {apod.media_type === 'image' ? (
-                <Image source={{ uri: apod.url }} style={styles.apodImage} resizeMode="cover" />
-              ) : (
-                <View style={styles.apodVideoPlaceholder}>
-                  <Text style={styles.apodVideoText}>🎬 Video — tap to open</Text>
-                </View>
-              )}
+              <Image source={{ uri: apod.url }} style={styles.apodImage} resizeMode="cover" />
               <View style={styles.apodInfo}>
                 <Text style={styles.apodTitle}>{apod.title}</Text>
                 <Text style={styles.apodDate}>{apod.date}</Text>
                 <Text style={styles.apodDesc} numberOfLines={3}>
-                  {apod.explanation}
+                  {apod.description}
                 </Text>
               </View>
             </View>
@@ -101,6 +97,7 @@ export default function ExploreScreen() {
           )}
         </View>
 
+        {/* Planet list */}
         <Text style={{ ...styles.sectionLabel, marginTop: 24 }}>
           Solar System
         </Text>
