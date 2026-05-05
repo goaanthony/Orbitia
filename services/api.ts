@@ -69,7 +69,7 @@ export async function fetchCurrentWeather(city: string, countryCode = '') {
 
 export async function fetchMarsWeather(): Promise<InSightData | null> {
   try {
-    const url = `https://api.nasa.gov/insight_weather/?api_key=${NASA_KEY}&feedtype=json&ver=1.0`;
+    const url = `https://api.nasa.gov/insight_weather/?api_key=DEMO_KEY&feedtype=json&ver=1.0`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`InSight API error: ${res.status}`);
     const json = await res.json();

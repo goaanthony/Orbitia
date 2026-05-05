@@ -1,6 +1,15 @@
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Image } from 'react-native';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  Image,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+} from 'react-native';
+import { useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useUser } from '@/context/UserContext';
 
@@ -11,29 +20,37 @@ const PLANETS = [
     id: 'earth',
     name: 'EARTH',
     subtitle: 'THE LIVING PLANET',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/The_Blue_Marble_%28remastered%29.jpg/240px-The_Blue_Marble_%28remastered%29.jpg',
+    image: 'https://images-assets.nasa.gov/image/as17-148-22727/as17-148-22727~orig.jpg',
   },
   {
     id: 'mars',
     name: 'MARS',
     subtitle: 'THE RED PLANET',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/240px-OSIRIS_Mars_true_color.jpg',
+    image: 'https://images-assets.nasa.gov/image/PIA00407/PIA00407~orig.jpg',
   },
   {
     id: 'moon',
     name: 'MOON',
     subtitle: "EARTH'S COMPANION",
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/240px-FullMoon2010.jpg',
+    image: 'https://images-assets.nasa.gov/image/PIA00405/PIA00405~orig.jpg',
   },
 ];
 
 export default function HomeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
   const router = useRouter();
   const { profile } = useUser();
 
-  const prev = () => setCurrentIndex((i) => (i - 1 + PLANETS.length) % PLANETS.length);
-  const next = () => setCurrentIndex((i) => (i + 1) % PLANETS.length);
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const page = Math.round(e.nativeEvent.contentOffset.x / width);
+    setCurrentIndex(page);
+  };
+
+  const goToPage = (i: number) => {
+    scrollRef.current?.scrollTo({ x: i * width, animated: true });
+    setCurrentIndex(i);
+  };
 
   const planet = PLANETS[currentIndex];
 
@@ -49,39 +66,73 @@ export default function HomeScreen() {
         <Text style={styles.title}>Which planet{'\n'}would you like to explore?</Text>
       </View>
 
-      <View style={styles.carouselContainer}>
-        <TouchableOpacity style={styles.arrowBtn} onPress={prev}>
-          <ChevronLeft color="#fff" size={20} />
-        </TouchableOpacity>
+      <View style={styles.carouselWrapper}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleScroll}
+          decelerationRate="fast"
+          scrollEventThrottle={16}
+          contentContainerStyle={{ alignItems: 'center' }}
+        >
+          {PLANETS.map((p) => (
+            <TouchableOpacity
+              key={p.id}
+              style={styles.slide}
+              activeOpacity={0.85}
+              onPress={() =>
+                router.push({ pathname: '/modal', params: { planetId: p.id } })
+              }
+            >
+              <View style={[styles.ring, styles.ring1]} />
+              <View style={[styles.ring, styles.ring2]} />
+              <View style={[styles.ring, styles.ring3]} />
+              <View style={styles.orbitDot} />
 
-        <View style={styles.planetWrapper}>
-          <View style={[styles.ring, styles.ring1]} />
-          <View style={[styles.ring, styles.ring2]} />
-          <View style={[styles.ring, styles.ring3]} />
-          <View style={styles.orbitDot} />
-
-          <Image source={{ uri: planet.image }} style={styles.planetImage} />
-          <Text style={styles.planetName}>{planet.name}</Text>
-          <Text style={styles.planetSubtitle}>{planet.subtitle}</Text>
-
-          <View style={styles.dotsRow}>
-            {PLANETS.map((_, i) => (
-              <View key={i} style={[styles.dot, i === currentIndex && styles.dotActive]} />
-            ))}
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.arrowBtn} onPress={next}>
-          <ChevronRight color="#fff" size={20} />
-        </TouchableOpacity>
+              <Image
+                source={{ uri: p.image }}
+                style={styles.planetImage}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push({ pathname: '/modal', params: { planetId: planet.id } })}
-      >
-        <Text style={styles.buttonText}>Explore planet</Text>
-      </TouchableOpacity>
+      <Text style={styles.planetName}>{planet.name}</Text>
+      <Text style={styles.planetSubtitle}>{planet.subtitle}</Text>
+
+      <View style={styles.selectorRow}>
+        {PLANETS.map((p, i) => (
+          <TouchableOpacity
+            key={p.id}
+            style={[styles.selectorItem, i === currentIndex && styles.selectorItemActive]}
+            onPress={() => goToPage(i)}
+            activeOpacity={0.7}
+          >
+            <Image source={{ uri: p.image }} style={styles.selectorImage} />
+            <Text
+              style={[
+                styles.selectorName,
+                i === currentIndex && styles.selectorNameActive,
+              ]}
+            >
+              {p.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.dots}>
+        {PLANETS.map((_, i) => (
+          <View
+            key={i}
+            style={[styles.dot, i === currentIndex && styles.dotActive]}
+          />
+        ))}
+      </View>
     </View>
   );
 }
@@ -125,19 +176,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 30,
   },
-  carouselContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+
+  carouselWrapper: {
     flex: 1,
+    marginHorizontal: -24,
   },
-  arrowBtn: {
-    padding: 8,
-  },
-  planetWrapper: {
+  slide: {
+    width: width,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
     position: 'relative',
   },
   ring: {
@@ -166,44 +213,69 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 90,
   },
+
   planetName: {
     color: '#fff',
     fontSize: 28,
     fontWeight: '700',
     letterSpacing: 3,
-    marginTop: 20,
+    textAlign: 'center',
+    marginTop: 12,
   },
   planetSubtitle: {
     color: '#9CA3AF',
     fontSize: 11,
     letterSpacing: 1,
     marginTop: 4,
+    textAlign: 'center',
+    marginBottom: 20,
   },
-  dotsRow: {
+
+  selectorRow: {
     flexDirection: 'row',
-    marginTop: 16,
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 16,
+  },
+  selectorItem: {
+    alignItems: 'center',
     gap: 6,
+    opacity: 0.4,
+  },
+  selectorItemActive: {
+    opacity: 1,
+  },
+  selectorImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  selectorName: {
+    color: '#9CA3AF',
+    fontSize: 9,
+    letterSpacing: 1.5,
+    fontWeight: '600',
+  },
+  selectorNameActive: {
+    color: '#fff',
+  },
+
+  dots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 8,
   },
   dot: {
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   dotActive: {
-    backgroundColor: '#fff',
-    width: 16,
-  },
-  button: {
     backgroundColor: '#E6F358',
-    paddingVertical: 18,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  buttonText: {
-    color: '#000',
-    fontWeight: '700',
-    fontSize: 16,
+    width: 16,
   },
 });

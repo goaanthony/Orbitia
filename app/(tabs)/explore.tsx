@@ -31,7 +31,6 @@ export default function ExploreScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Galaxy</Text>
 
-      {/* Solar system diagram */}
       <View style={styles.solarSystem}>
         <View style={styles.sun} />
         {SOLAR_SYSTEM.map((planet) => (
@@ -76,7 +75,6 @@ export default function ExploreScreen() {
       </View>
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* NASA APOD Card */}
         <View style={styles.apodSection}>
           <Text style={styles.sectionLabel}>NASA · Picture of the Day</Text>
           {apodLoading ? (
@@ -97,7 +95,6 @@ export default function ExploreScreen() {
           )}
         </View>
 
-        {/* Planet list */}
         <Text style={{ ...styles.sectionLabel, marginTop: 24 }}>
           Solar System
         </Text>

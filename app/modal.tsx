@@ -11,10 +11,15 @@ import {
   type ForecastEntry, type InSightData,
 } from '@/services/api';
 
+const EARTH_IMAGE =
+  'https://images-assets.nasa.gov/image/as17-148-22727/as17-148-22727~orig.jpg';
+const MARS_IMAGE =
+  'https://images-assets.nasa.gov/image/PIA00407/PIA00407~orig.jpg';
+
 const MOON_STATIC = {
   name: 'MOON', location: 'MOON',
   temp: '-173°C', feelsLike: '-180°C',
-  image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/240px-FullMoon2010.jpg',
+  image: 'https://images-assets.nasa.gov/image/PIA00405/PIA00405~orig.jpg',
   forecast: [
     { day: 'Day 1', date: '', temp: '-170°C', icon: '🌑' },
     { day: 'Day 2', date: '', temp: '-175°C', icon: '🌑' },
@@ -23,11 +28,6 @@ const MOON_STATIC = {
     { day: 'Day 5', date: '', temp: '-172°C', icon: '🌑' },
   ],
 };
-
-const EARTH_IMAGE =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/The_Blue_Marble_%28remastered%29.jpg/240px-The_Blue_Marble_%28remastered%29.jpg';
-const MARS_IMAGE =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/240px-OSIRIS_Mars_true_color.jpg';
 
 type DailyRow = { day: string; date: string; temp: string; icon: string };
 
