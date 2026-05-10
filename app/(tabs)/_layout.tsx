@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Bookmark, Home, Rocket, Search, User } from "lucide-react-native";
+import { Bookmark, Home, Rocket, Search } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
@@ -41,12 +41,6 @@ export default function TabLayout() {
         name="bookmark"
         options={{
           tabBarIcon: ({ color }) => <Bookmark color={color} size={22} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          tabBarIcon: ({ color }) => <User color={color} size={22} />,
         }}
       />
     </Tabs>

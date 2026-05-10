@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useUser } from '@/context/UserContext';
 
 const { width } = Dimensions.get('window');
 
@@ -40,7 +39,6 @@ export default function HomeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const router = useRouter();
-  const { profile } = useUser();
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const page = Math.round(e.nativeEvent.contentOffset.x / width);
@@ -57,12 +55,10 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.appName}>SPACED</Text>
-        <Image source={{ uri: profile.avatar }} style={styles.avatar} />
+        <Text style={styles.appName}>Orbitia</Text>
       </View>
 
       <View style={styles.titleSection}>
-        <Text style={styles.greeting}>Hi {profile.name},</Text>
         <Text style={styles.title}>Which planet{'\n'}would you like to explore?</Text>
       </View>
 

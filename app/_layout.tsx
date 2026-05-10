@@ -1,5 +1,4 @@
 import { BookmarkProvider } from '@/context/BookmarkContext';
-import { UserProvider } from '@/context/UserContext';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
@@ -53,7 +52,7 @@ function AppSplash({ onDone }: { onDone: () => void }) {
         </View>
       </Animated.View>
 
-      <Text style={styles.appName}>SPACED</Text>
+      <Text style={styles.appName}>Orbitia</Text>
 
       <Animated.Text style={[styles.tagline, { opacity: textOpacity }]}>
         Explore the universe
@@ -77,23 +76,21 @@ export default function RootLayout() {
 
   if (showSplash) {
     return (
-      <UserProvider>
-        <BookmarkProvider>
-          <AppSplash onDone={() => setShowSplash(false)} />
-        </BookmarkProvider>
-      </UserProvider>
+      // 👇 Plus de UserProvider ici
+      <BookmarkProvider>
+        <AppSplash onDone={() => setShowSplash(false)} />
+      </BookmarkProvider>
     );
   }
 
   return (
-    <UserProvider>
-      <BookmarkProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        </Stack>
-      </BookmarkProvider>
-    </UserProvider>
+    // 👇 Et plus de UserProvider ici non plus !
+    <BookmarkProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      </Stack>
+    </BookmarkProvider>
   );
 }
 

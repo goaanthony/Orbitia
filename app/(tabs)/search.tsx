@@ -187,7 +187,6 @@ export default function SearchScreen() {
       <FlatList
         data={filteredCities}
         keyExtractor={(item) => item.id}
-        scrollEnabled={false}
         renderItem={({ item }) => {
           const bookmarked = isBookmarked(item.id);
           const isLoading = loadingWeather.has(item.id);
