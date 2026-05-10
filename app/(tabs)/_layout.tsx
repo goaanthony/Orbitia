@@ -34,22 +34,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Rocket
-              color={focused ? "#000" : color}
-              size={22}
-              style={
-                focused
-                  ? {
-                      backgroundColor: "#fff",
-                      borderRadius: 24,
-                      padding: 8,
-                      overflow: "hidden",
-                    }
-                  : undefined
-              }
-            />
-          ),
+          tabBarIcon: ({ color }) => <Rocket color={color} size={22} />,
         }}
       />
       <Tabs.Screen

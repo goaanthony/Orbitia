@@ -33,7 +33,9 @@ type DailyRow = { day: string; date: string; temp: string; icon: string };
 
 export default function PlanetDetail() {
   const { planetId, city, country } = useLocalSearchParams<{
-    planetId: string; city?: string; country?: string;
+    planetId?: string;
+    city?: string;
+    country?: string;
   }>();
   const router = useRouter();
 
@@ -45,13 +47,14 @@ export default function PlanetDetail() {
   const [dateStr, setDateStr] = useState('');
   const [marsNote, setMarsNote] = useState('');   // InSight disclaimer
   const [marsExtra, setMarsExtra] = useState(''); // pressure / wind info
+  const [planetImage, setPlanetImage] = useState(EARTH_IMAGE);
+  const [planetName, setPlanetName] = useState('EARTH');
 
-  const isEarth = !planetId || planetId === 'earth';
-  const isMars = planetId === 'mars';
-  const isMoon = planetId === 'moon';
-
-  const planetImage = isEarth ? EARTH_IMAGE : isMars ? MARS_IMAGE : MOON_STATIC.image;
-  const planetName = isEarth ? 'EARTH' : isMars ? 'MARS' : 'MOON';
+  // Déterminer le type de contenu
+  const isCity = !!(city && country); // Si city et country sont définis, c'est une ville
+  const isEarth = !isCity && (!planetId || planetId === 'earth');
+  const isMars = !isCity && planetId === 'mars';
+  const isMoon = !isCity && planetId === 'moon';
 
   useEffect(() => {
     const now = new Date();
@@ -61,22 +64,69 @@ export default function PlanetDetail() {
         now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     );
 
-    if (isMoon) {
+    // Gérer les trois cas: ville, mars, lune, ou earth
+    if (isCity && city) {
+      // 🌍 C'est une vraie ville!
+      setPlanetImage(EARTH_IMAGE);
+      setPlanetName('EARTH');
+      loadCityWeather(city, country);
+    } else if (isMoon) {
+      // 🌙 Lune
+      setPlanetImage(MOON_STATIC.image);
+      setPlanetName('MOON');
       setLocation(MOON_STATIC.location);
       setTemp(MOON_STATIC.temp);
       setFeelsLike(MOON_STATIC.feelsLike);
       setForecast(MOON_STATIC.forecast);
-      return;
-    }
-
-    if (isMars) {
+    } else if (isMars) {
+      // 🔴 Mars
+      setPlanetImage(MARS_IMAGE);
+      setPlanetName('MARS');
       loadMarsWeather();
-      return;
+    } else {
+      // 🌎 Earth (par défaut)
+      setPlanetImage(EARTH_IMAGE);
+      setPlanetName('EARTH');
+      setLoading(true);
+      loadEarthWeather();
     }
+  }, [planetId, city, country, isCity, isMoon, isMars]);
 
+  async function loadCityWeather(cityName: string, countryCode?: string) {
     setLoading(true);
-    loadEarthWeather();
-  }, [planetId]);
+    try {
+      const [current, forecastData] = await Promise.all([
+        fetchCurrentWeather(cityName, countryCode),
+        fetchWeatherForecast(cityName, countryCode),
+      ]);
+
+      if (current) {
+        setLocation(
+          `${current.name?.toUpperCase() || cityName.toUpperCase()}, ${current.sys?.country || countryCode || ''}`
+        );
+        setTemp(`${Math.round(current.main?.temp ?? 0)}°C`);
+        setFeelsLike(`${Math.round(current.main?.feels_like ?? 0)}°C`);
+      }
+
+      if (forecastData?.list?.length) {
+        const daily = pickDailyForecasts(forecastData.list);
+        setForecast(
+          daily.map((entry) => ({
+            day: formatForecastDate(entry.dt_txt).split(' ')[0],
+            date: formatForecastDate(entry.dt_txt).split(' ')[1] ?? '',
+            temp: `${Math.round(entry.main.temp)}°C`,
+            icon: weatherIconToEmoji(entry.weather[0]?.icon ?? ''),
+          }))
+        );
+      }
+    } catch (e) {
+      console.error('[loadCityWeather]', e);
+      setTemp('—');
+      setFeelsLike('—');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function loadMarsWeather() {
     setLoading(true);
@@ -120,6 +170,7 @@ export default function PlanetDetail() {
         ]);
       }
     } catch (e) {
+      console.error('[loadMarsWeather]', e);
       setTemp('-46°C');
       setFeelsLike('-50°C');
     } finally {
@@ -128,17 +179,14 @@ export default function PlanetDetail() {
   }
 
   async function loadEarthWeather() {
-    const targetCity = city || 'Bordeaux';
-    const targetCountry = country || 'FR';
-
     try {
       const [current, forecastData] = await Promise.all([
-        fetchCurrentWeather(targetCity, targetCountry),
-        fetchWeatherForecast(targetCity, targetCountry),
+        fetchCurrentWeather('Bordeaux', 'FR'),
+        fetchWeatherForecast('Bordeaux', 'FR'),
       ]);
 
       if (current) {
-        setLocation(`${current.name?.toUpperCase()}, ${current.sys?.country ?? targetCountry}`);
+        setLocation(`${current.name?.toUpperCase()}, ${current.sys?.country ?? 'FR'}`);
         setTemp(`${Math.round(current.main?.temp ?? 0)}°C`);
         setFeelsLike(`${Math.round(current.main?.feels_like ?? 0)}°C`);
       }
@@ -221,7 +269,9 @@ export default function PlanetDetail() {
         <View style={styles.factCard}>
           <Text style={styles.factLabel}>DID YOU KNOW</Text>
           <Text style={styles.factText}>
-            {isEarth
+            {isCity
+              ? 'Cities are constantly changing, shaped by millions of people and countless stories waiting to be discovered.'
+              : isEarth
               ? 'Earth is the only known planet to harbour life, with over 8.7 million species catalogued so far.'
               : isMars
               ? 'A Martian day (sol) is 24 hours, 37 minutes — the most Earth-like of any planet in the solar system.'

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-import { Stack } from 'expo-router';
-import { View, Text, StyleSheet, Image, Animated } from 'react-native';
+import { BookmarkProvider } from '@/context/BookmarkContext';
 import { UserProvider } from '@/context/UserContext';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useState } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -77,17 +78,21 @@ export default function RootLayout() {
   if (showSplash) {
     return (
       <UserProvider>
-        <AppSplash onDone={() => setShowSplash(false)} />
+        <BookmarkProvider>
+          <AppSplash onDone={() => setShowSplash(false)} />
+        </BookmarkProvider>
       </UserProvider>
     );
   }
 
   return (
     <UserProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+      <BookmarkProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+      </BookmarkProvider>
     </UserProvider>
   );
 }
