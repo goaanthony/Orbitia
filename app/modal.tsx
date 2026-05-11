@@ -5,8 +5,10 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react-native';
+import * as Location from 'expo-location';
 import {
   fetchWeatherForecast, fetchCurrentWeather, fetchMarsWeather,
+  fetchWeatherByCoords, fetchForecastByCoords,
   weatherIconToEmoji, formatForecastDate, pickDailyForecasts,
   type ForecastEntry, type InSightData,
 } from '@/services/api';
@@ -32,11 +34,10 @@ const MOON_STATIC = {
 type DailyRow = { day: string; date: string; temp: string; icon: string };
 
 export default function PlanetDetail() {
-  const { planetId, city, country, cityImage } = useLocalSearchParams<{
+  const { planetId, city, country } = useLocalSearchParams<{
     planetId?: string;
     city?: string;
     country?: string;
-    cityImage?: string;
   }>();
   const router = useRouter();
 
@@ -50,7 +51,9 @@ export default function PlanetDetail() {
   const [marsExtra, setMarsExtra] = useState(''); // pressure / wind info
   const [planetImage, setPlanetImage] = useState(EARTH_IMAGE);
   const [planetName, setPlanetName] = useState('EARTH');
-  const isCity = !!(city && country);
+
+  // Déterminer le type de contenu
+  const isCity = !!(city && country); // Si city et country sont définis, c'est une ville
   const isEarth = !isCity && (!planetId || planetId === 'earth');
   const isMars = !isCity && planetId === 'mars';
   const isMoon = !isCity && planetId === 'moon';
@@ -63,11 +66,14 @@ export default function PlanetDetail() {
         now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     );
 
+    // Gérer les trois cas: ville, mars, lune, ou earth
     if (isCity && city) {
-      setPlanetImage(cityImage || EARTH_IMAGE);
-      setPlanetName(city.toUpperCase());
+      // 🌍 C'est une vraie ville!
+      setPlanetImage(EARTH_IMAGE);
+      setPlanetName('EARTH');
       loadCityWeather(city, country);
     } else if (isMoon) {
+      // 🌙 Lune
       setPlanetImage(MOON_STATIC.image);
       setPlanetName('MOON');
       setLocation(MOON_STATIC.location);
@@ -75,10 +81,12 @@ export default function PlanetDetail() {
       setFeelsLike(MOON_STATIC.feelsLike);
       setForecast(MOON_STATIC.forecast);
     } else if (isMars) {
+      // 🔴 Mars
       setPlanetImage(MARS_IMAGE);
       setPlanetName('MARS');
       loadMarsWeather();
     } else {
+      // 🌎 Earth (par défaut)
       setPlanetImage(EARTH_IMAGE);
       setPlanetName('EARTH');
       setLoading(true);
@@ -174,13 +182,28 @@ export default function PlanetDetail() {
 
   async function loadEarthWeather() {
     try {
-      const [current, forecastData] = await Promise.all([
-        fetchCurrentWeather('Bordeaux', 'FR'),
-        fetchWeatherForecast('Bordeaux', 'FR'),
-      ]);
+      let current = null;
+      let forecastData = null;
+
+      // Try to get the user's real GPS location
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+        const { latitude, longitude } = loc.coords;
+        [current, forecastData] = await Promise.all([
+          fetchWeatherByCoords(latitude, longitude),
+          fetchForecastByCoords(latitude, longitude),
+        ]);
+      } else {
+        // Permission denied — fall back to Bordeaux
+        [current, forecastData] = await Promise.all([
+          fetchCurrentWeather('Bordeaux', 'FR'),
+          fetchWeatherForecast('Bordeaux', 'FR'),
+        ]);
+      }
 
       if (current) {
-        setLocation(`${current.name?.toUpperCase()}, ${current.sys?.country ?? 'FR'}`);
+        setLocation(`${current.name?.toUpperCase()}, ${current.sys?.country ?? ''}`);
         setTemp(`${Math.round(current.main?.temp ?? 0)}°C`);
         setFeelsLike(`${Math.round(current.main?.feels_like ?? 0)}°C`);
       }

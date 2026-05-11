@@ -20,10 +20,10 @@ export type WeatherForecast = {
 
 export type InSightSol = {
   sol: string;
-  AT?: { av: number; mn: number; mx: number };
-  PRE?: { av: number; mn: number; mx: number };
-  HWS?: { av: number; mn: number; mx: number };
-  WD?: { most_common?: { compass_point: string } };
+  AT?: { av: number; mn: number; mx: number }; // Atmospheric Temperature (°C)
+  PRE?: { av: number; mn: number; mx: number }; // Pressure (Pa)
+  HWS?: { av: number; mn: number; mx: number }; // Horizontal Wind Speed (m/s)
+  WD?: { most_common?: { compass_point: string } };  // Wind direction
 };
 
 export type InSightData = {
@@ -67,6 +67,30 @@ export async function fetchCurrentWeather(city: string, countryCode = '') {
   }
 }
 
+export async function fetchWeatherByCoords(lat: number, lon: number) {
+  try {
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_KEY}&units=metric`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`OpenWeather error: ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.error('[fetchWeatherByCoords]', e);
+    return null;
+  }
+}
+
+export async function fetchForecastByCoords(lat: number, lon: number): Promise<WeatherForecast | null> {
+  try {
+    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_KEY}&units=metric`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`OpenWeather error: ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.error('[fetchForecastByCoords]', e);
+    return null;
+  }
+}
+
 export async function fetchMarsWeather(): Promise<InSightData | null> {
   try {
     const url = `https://api.nasa.gov/insight_weather/?api_key=DEMO_KEY&feedtype=json&ver=1.0`;
@@ -91,45 +115,6 @@ export async function fetchMarsWeather(): Promise<InSightData | null> {
     };
   } catch (e) {
     console.error('[fetchMarsWeather]', e);
-    return null;
-  }
-}
-
-
-export type MoonWeather = {
-  illumination: number;
-  phase: string;
-  surfaceTemp: number;
-  nightTemp: number;
-  feelsLike: number;
-  source: string;
-};
-
-export async function fetchMoonWeather(): Promise<MoonWeather | null> {
-  try {
-    const today = new Date();
-    const dateStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-    const illuUrl = `https://aa.usno.navy.mil/api/rstt/oneday?date=${dateStr}&coords=44.5,2.3&tz=1`;
-    const illuRes = await fetch(illuUrl);
-    if (!illuRes.ok) throw new Error(`USNO error: ${illuRes.status}`);
-    const illuJson = await illuRes.json();
-
-    const rawFrac = illuJson?.properties?.data?.fracillum ?? '50%';
-    const illumination: number = parseInt(String(rawFrac).replace('%', ''), 10) || 50;
-
-    const phase: string = illuJson?.properties?.data?.curphase ?? 'Unknown';
-
-    const DAY_TEMP = 127;
-    const NIGHT_TEMP = -173;
-    const t = illumination / 100; // 0 = new moon, 1 = full moon
-    const surfaceTemp = Math.round(NIGHT_TEMP + (DAY_TEMP - NIGHT_TEMP) * t);
-    const nightTemp = Math.round(NIGHT_TEMP + (DAY_TEMP - NIGHT_TEMP) * (1 - t));
-    const feelsLike = Math.round(surfaceTemp * t + nightTemp * (1 - t));
-
-    return { illumination, phase, surfaceTemp, nightTemp, feelsLike,
-      source: 'Estimated from lunar phase · US Naval Observatory' };
-  } catch (e) {
-    console.error('[fetchMoonWeather]', e);
     return null;
   }
 }
