@@ -95,7 +95,6 @@ export default function SearchScreen() {
   const [weatherCache, setWeatherCache] = useState<Record<string, string>>({});
   const [loadingWeather, setLoadingWeather] = useState<Set<string>>(new Set());
 
-  // Charger la météo de base pour les villes principales
   useEffect(() => {
     const loadWeatherForMainCities = async () => {
       const mainCities = ['Paris', 'London', 'Tokyo', 'New York', 'Sydney'];
@@ -126,7 +125,6 @@ export default function SearchScreen() {
   );
 
   const handleAddBookmark = async (city: typeof ALL_CITIES[0]) => {
-    // Récupérer la vraie météo si pas déjà en cache
     let temp = weatherCache[city.name] || city.temp;
 
     if (!weatherCache[city.name]) {
@@ -151,9 +149,9 @@ export default function SearchScreen() {
     await addBookmark({
       ...city,
       temp,
-      city: city.name, // Nom de la ville pour les appels API
-      country: city.country, // Code pays ISO
-      isCity: true, // C'est une vraie ville!
+      city: city.name,
+      country: city.country,
+      isCity: true,
     });
   };
 

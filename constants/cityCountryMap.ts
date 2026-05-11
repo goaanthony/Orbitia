@@ -1,4 +1,3 @@
-// Mapping des villes aux codes pays ISO
 export const CITY_COUNTRY_MAP: Record<string, string> = {
   // Europe
   'Paris': 'FR',

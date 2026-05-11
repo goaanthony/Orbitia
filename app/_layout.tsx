@@ -76,7 +76,6 @@ export default function RootLayout() {
 
   if (showSplash) {
     return (
-      // 👇 Plus de UserProvider ici
       <BookmarkProvider>
         <AppSplash onDone={() => setShowSplash(false)} />
       </BookmarkProvider>
@@ -84,7 +83,6 @@ export default function RootLayout() {
   }
 
   return (
-    // 👇 Et plus de UserProvider ici non plus !
     <BookmarkProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />

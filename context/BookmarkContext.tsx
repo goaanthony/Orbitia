@@ -9,9 +9,9 @@ export type Bookmark = {
   location: string;
   temp: string;
   image: string;
-  city?: string; // Nom de la ville pour les appels API
-  country?: string; // Code pays ISO (ex: FR, US, etc.)
-  isCity?: boolean; // true si c'est une vraie ville, false si c'est une planète
+  city?: string;
+  country?: string;
+  isCity?: boolean;
 };
 
 type BookmarkContextType = {
@@ -19,7 +19,7 @@ type BookmarkContextType = {
   addBookmark: (bookmark: Bookmark) => Promise<void>;
   removeBookmark: (id: string) => Promise<void>;
   isBookmarked: (id: string) => boolean;
-  refreshWeather: (id: string) => Promise<void>; // Nouveau: rafraîchir la météo
+  refreshWeather: (id: string) => Promise<void>;
 };
 
 const BookmarkContext = createContext<BookmarkContextType>({
@@ -48,12 +48,10 @@ export function BookmarkProvider({ children }: { children: React.ReactNode }) {
 
   const addBookmark = async (bookmark: Bookmark) => {
     try {
-      // Récupérer la vraie météo si on a un nom de ville
       let bookmarkWithWeather = bookmark;
       if (bookmark.city) {
         const weatherData = await fetchCurrentWeather(bookmark.city);
         if (weatherData?.main?.temp) {
-          // Arrondir à un chiffre après la virgule
           const temp = Math.round(weatherData.main.temp * 10) / 10;
           bookmarkWithWeather = {
             ...bookmark,
@@ -67,7 +65,6 @@ export function BookmarkProvider({ children }: { children: React.ReactNode }) {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch (error) {
       console.error('[addBookmark] Error:', error);
-      // En cas d'erreur, ajouter quand même le bookmark avec la temp statique
       const updated = [...bookmarks, bookmark];
       setBookmarks(updated);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));

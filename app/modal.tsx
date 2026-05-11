@@ -50,9 +50,7 @@ export default function PlanetDetail() {
   const [marsExtra, setMarsExtra] = useState(''); // pressure / wind info
   const [planetImage, setPlanetImage] = useState(EARTH_IMAGE);
   const [planetName, setPlanetName] = useState('EARTH');
-
-  // Déterminer le type de contenu
-  const isCity = !!(city && country); // Si city et country sont définis, c'est une ville
+  const isCity = !!(city && country);
   const isEarth = !isCity && (!planetId || planetId === 'earth');
   const isMars = !isCity && planetId === 'mars';
   const isMoon = !isCity && planetId === 'moon';
@@ -65,14 +63,11 @@ export default function PlanetDetail() {
         now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     );
 
-    // Gérer les trois cas: ville, mars, lune, ou earth
     if (isCity && city) {
-      // 🌍 C'est une vraie ville!
       setPlanetImage(cityImage || EARTH_IMAGE);
       setPlanetName(city.toUpperCase());
       loadCityWeather(city, country);
     } else if (isMoon) {
-      // 🌙 Lune
       setPlanetImage(MOON_STATIC.image);
       setPlanetName('MOON');
       setLocation(MOON_STATIC.location);
@@ -80,12 +75,10 @@ export default function PlanetDetail() {
       setFeelsLike(MOON_STATIC.feelsLike);
       setForecast(MOON_STATIC.forecast);
     } else if (isMars) {
-      // 🔴 Mars
       setPlanetImage(MARS_IMAGE);
       setPlanetName('MARS');
       loadMarsWeather();
     } else {
-      // 🌎 Earth (par défaut)
       setPlanetImage(EARTH_IMAGE);
       setPlanetName('EARTH');
       setLoading(true);

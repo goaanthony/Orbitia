@@ -26,14 +26,12 @@ export default function BookmarkScreen() {
   };
 
   const handleCardPress = (item: any) => {
-    // Si c'est une vraie ville (bookmark de ville), passer city et country
     if (item.isCity && item.city && item.country) {
       router.push({
         pathname: "/modal",
         params: { city: item.city, country: item.country, cityImage: item.image }
       });
     } else {
-      // Sinon, c'est une planète (earth, mars, moon)
       const planetId = item.planet?.toLowerCase() || 'earth';
       router.push({
         pathname: "/modal",
