@@ -95,6 +95,58 @@ export async function fetchMarsWeather(): Promise<InSightData | null> {
   }
 }
 
+
+export type MoonWeather = {
+  illumination: number;      // 0–100 %
+  phase: string;             // e.g. "Waxing Gibbous"
+  surfaceTemp: number;       // estimated °C (day side)
+  nightTemp: number;         // estimated °C (night side)
+  feelsLike: number;         // weighted average based on illumination
+  source: string;            // attribution string
+};
+
+/**
+ * Fetches current lunar illumination from the US Naval Observatory (no key needed)
+ * and derives a scientifically-grounded surface temperature estimate.
+ *
+ * Temperature model (based on Diviner/LRO data):
+ *   Day side peak  ≈ +127 °C  (full sun at equator)
+ *   Night side min ≈ −173 °C
+ *   The illumination % tells us what fraction of the visible disc is sunlit,
+ *   so we interpolate linearly between night and day values.
+ */
+export async function fetchMoonWeather(): Promise<MoonWeather | null> {
+  try {
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    // USNO oneday endpoint — free, no key, returns fracillum + curphase
+    const illuUrl = `https://aa.usno.navy.mil/api/rstt/oneday?date=${dateStr}&coords=44.5,2.3&tz=1`;
+    const illuRes = await fetch(illuUrl);
+    if (!illuRes.ok) throw new Error(`USNO error: ${illuRes.status}`);
+    const illuJson = await illuRes.json();
+
+    // fracillum is returned as a string like "92%" — strip % and parse
+    const rawFrac = illuJson?.properties?.data?.fracillum ?? '50%';
+    const illumination: number = parseInt(String(rawFrac).replace('%', ''), 10) || 50;
+
+    const phase: string = illuJson?.properties?.data?.curphase ?? 'Unknown';
+
+    // Temperature model based on Diviner/LRO measurements
+    const DAY_TEMP = 127;    // °C full-sun equatorial peak
+    const NIGHT_TEMP = -173; // °C deep night minimum
+    const t = illumination / 100; // 0 = new moon, 1 = full moon
+    const surfaceTemp = Math.round(NIGHT_TEMP + (DAY_TEMP - NIGHT_TEMP) * t);
+    const nightTemp = Math.round(NIGHT_TEMP + (DAY_TEMP - NIGHT_TEMP) * (1 - t));
+    const feelsLike = Math.round(surfaceTemp * t + nightTemp * (1 - t));
+
+    return { illumination, phase, surfaceTemp, nightTemp, feelsLike,
+      source: 'Estimated from lunar phase · US Naval Observatory' };
+  } catch (e) {
+    console.error('[fetchMoonWeather]', e);
+    return null;
+  }
+}
+
 const NASA_IMAGE_QUERIES = [
   'nebula', 'galaxy spiral', 'planet mars surface',
   'hubble deep field', 'saturn rings', 'solar flare',
