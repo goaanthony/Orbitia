@@ -30,7 +30,7 @@ export default function BookmarkScreen() {
     if (item.isCity && item.city && item.country) {
       router.push({
         pathname: "/modal",
-        params: { city: item.city, country: item.country }
+        params: { city: item.city, country: item.country, cityImage: item.image }
       });
     } else {
       // Sinon, c'est une planète (earth, mars, moon)

@@ -32,10 +32,11 @@ const MOON_STATIC = {
 type DailyRow = { day: string; date: string; temp: string; icon: string };
 
 export default function PlanetDetail() {
-  const { planetId, city, country } = useLocalSearchParams<{
+  const { planetId, city, country, cityImage } = useLocalSearchParams<{
     planetId?: string;
     city?: string;
     country?: string;
+    cityImage?: string;
   }>();
   const router = useRouter();
 
@@ -67,8 +68,8 @@ export default function PlanetDetail() {
     // Gérer les trois cas: ville, mars, lune, ou earth
     if (isCity && city) {
       // 🌍 C'est une vraie ville!
-      setPlanetImage(EARTH_IMAGE);
-      setPlanetName('EARTH');
+      setPlanetImage(cityImage || EARTH_IMAGE);
+      setPlanetName(city.toUpperCase());
       loadCityWeather(city, country);
     } else if (isMoon) {
       // 🌙 Lune
